@@ -15,8 +15,7 @@ class RoleSelectScreen extends StatelessWidget {
       case UserRole.passenger:
         context.push('/trips');
       case UserRole.driver:
-        // TODO: driver flow
-        break;
+        context.push('/driver-dashboard');
     }
   }
 

@@ -9,8 +9,7 @@ class TripCard extends StatelessWidget {
   final Trip trip;
   final VoidCallback onBook;
 
-  String get _seatsText =>
-      trip.seatsLeft == 1 ? 'مقعد فاضي' : '${trip.seatsLeft} مقاعد فاضية';
+  String get _seatsText => '${trip.seatCapacity} مقاعد';
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +27,7 @@ class TripCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${trip.from}  ←  ${trip.to}',
+                  trip.routeSummary,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -75,7 +74,7 @@ class TripCard extends StatelessWidget {
 class _PriceChip extends StatelessWidget {
   const _PriceChip({required this.price});
 
-  final int price;
+  final double price;
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +85,7 @@ class _PriceChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
-        '$price ج',
+        '${price == price.roundToDouble() ? price.toInt() : price} ج',
         style: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,
@@ -109,12 +108,19 @@ class _MetaRow extends StatelessWidget {
 
     return Row(
       children: [
-        const Icon(Icons.schedule_rounded, size: 18, color: AppColors.textMuted),
+        const Icon(
+          Icons.schedule_rounded,
+          size: 18,
+          color: AppColors.textMuted,
+        ),
         const SizedBox(width: 4),
         Text(time, style: style),
         const SizedBox(width: 16),
-        const Icon(Icons.event_seat_rounded,
-            size: 18, color: AppColors.textMuted),
+        const Icon(
+          Icons.event_seat_rounded,
+          size: 18,
+          color: AppColors.textMuted,
+        ),
         const SizedBox(width: 4),
         Text(seatsText, style: style),
       ],
@@ -153,15 +159,12 @@ class _DriverRow extends StatelessWidget {
             style: const TextStyle(fontSize: 16, color: AppColors.dark),
           ),
         ),
-        const Icon(Icons.star_rounded, size: 20, color: AppColors.primaryDark),
-        const SizedBox(width: 4),
-        Text(
-          '${trip.rating}',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
+        if (trip.driverVerificationStatus == 'verified')
+          const Icon(
+            Icons.verified_rounded,
+            size: 20,
             color: AppColors.primaryDark,
           ),
-        ),
       ],
     );
   }

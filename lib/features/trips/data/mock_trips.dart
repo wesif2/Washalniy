@@ -10,6 +10,7 @@ const mockTrips = <Trip>[
     driverName: 'أحمد',
     carModel: 'كيا سيراتو',
     rating: 4.9,
+    routeStops: const ['منية النصر', 'ميت غمر', 'بنها', 'القاهرة'],
   ),
   Trip(
     from: 'منية النصر',
@@ -20,5 +21,6 @@ const mockTrips = <Trip>[
     driverName: 'محمود',
     carModel: 'هيونداي إلنترا',
     rating: 4.8,
+    routeStops: const ['منية النصر', 'المنصورة'],
   ),
 ];
