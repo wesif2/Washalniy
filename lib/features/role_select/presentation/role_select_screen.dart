@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../trips/presentation/trips_screen.dart';
 import '../domain/user_role.dart';
 import 'widgets/login_prompt.dart';
 import 'widgets/role_card.dart';
@@ -13,17 +13,11 @@ class RoleSelectScreen extends StatelessWidget {
   void _onRoleSelected(BuildContext context, UserRole role) {
     switch (role) {
       case UserRole.passenger:
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const TripsScreen()),
-        );
+        context.push('/trips');
       case UserRole.driver:
         // TODO: driver flow
         break;
     }
-  }
-
-  void _onLoginTap(BuildContext context) {
-    // TODO: login screen
   }
 
   @override
@@ -65,7 +59,7 @@ class RoleSelectScreen extends StatelessWidget {
                     ),
                     const Spacer(),
                     Center(
-                      child: LoginPrompt(onTap: () => _onLoginTap(context)),
+                      child: LoginPrompt(onTap: () => context.push('/login')),
                     ),
                   ],
                 ),
