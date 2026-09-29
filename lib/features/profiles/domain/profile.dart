@@ -5,7 +5,7 @@ class Profile {
     this.phone,
     this.email,
     this.avatarUrl,
-    this.role = 'passenger',
+    this.role,
     this.createdAt,
     this.updatedAt,
   });
@@ -15,7 +15,7 @@ class Profile {
   final String? phone;
   final String? email;
   final String? avatarUrl;
-  final String role;
+  final String? role;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -26,7 +26,7 @@ class Profile {
       phone: json['phone']?.toString(),
       email: json['email']?.toString(),
       avatarUrl: json['avatar_url']?.toString(),
-      role: (json['role'] ?? 'passenger').toString(),
+      role: json['role']?.toString(),
       createdAt: json['created_at'] == null
           ? null
           : DateTime.tryParse(json['created_at'].toString()),

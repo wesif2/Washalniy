@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/route_timeline.dart';
 import '../../trips/domain/trip.dart';
-import '../data/booking_repository.dart';
 import 'providers/booking_providers.dart';
 
 class BookingScreen extends ConsumerStatefulWidget {
@@ -17,38 +17,51 @@ class BookingScreen extends ConsumerStatefulWidget {
 }
 
 class _BookingScreenState extends ConsumerState<BookingScreen> {
-  late final List<String> _stops = widget.trip.routeStops.isNotEmpty ? widget.trip.routeStops : [widget.trip.from, widget.trip.to];
-  late final Map<String, String> _stopIdByName = {
-    for (var i = 0; i < _stops.length; i++)
-      _stops[i]: widget.trip.routeStopIds.isNotEmpty && i < widget.trip.routeStopIds.length
-          ? widget.trip.routeStopIds[i]
-          : _stops[i],
-  };
-  String? _pickup;
-  String? _dropoff;
+  late final List<String> _stops = widget.trip.displayedRouteStops;
+  int? _pickupIndex;
+  int? _dropoffIndex;
   int _seats = 1;
   bool _loading = false;
+  bool _customPickup = false;
   String? _errorText;
+
+  int get _availableSeats {
+    final pickupIndex = _pickupIndex;
+    final dropoffIndex = _dropoffIndex;
+    if (pickupIndex == null || dropoffIndex == null) return 0;
+    return widget.trip.availableSeatsForDisplayRange(pickupIndex, dropoffIndex);
+  }
 
   @override
   void initState() {
     super.initState();
-    if (_stops.isNotEmpty) {
-      _pickup = _stops.first;
-    }
+    if (_stops.isNotEmpty) _pickupIndex = 0;
     if (_stops.length > 1) {
-      _dropoff = _stops.last;
+      _dropoffIndex = _stops.length - 1;
     }
   }
 
   Future<void> _submitBooking() async {
-    if (_pickup == null || _dropoff == null || _pickup == _dropoff) {
-      setState(() => _errorText = 'اختر نقطة انطلاق ومكان وصول صالحين.');
+    final pickupIndex = _pickupIndex;
+    final dropoffIndex = _dropoffIndex;
+    if (pickupIndex == null ||
+        dropoffIndex == null ||
+        dropoffIndex <= pickupIndex) {
+      setState(
+        () => _errorText = 'Choose a valid pickup and a later drop-off.',
+      );
       return;
     }
-
-    if (_seats <= 0) {
-      setState(() => _errorText = 'يجب اختيار عدد مقاعد أكبر من صفر.');
+    if (_customPickup) {
+      setState(
+        () => _errorText = 'Custom pickup is not available until route location validation is connected.',
+      );
+      return;
+    }
+    if (_seats <= 0 || _seats > _availableSeats) {
+      setState(
+        () => _errorText = 'Not enough seats are available on this segment.',
+      );
       return;
     }
 
@@ -58,29 +71,30 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     });
 
     try {
-      final pickupStopName = _pickup ?? _stops.first;
-      final dropoffStopName = _dropoff ?? _stops.last;
-      final pickupStopId = _stopIdByName[pickupStopName] ?? pickupStopName;
-      final dropoffStopId = _stopIdByName[dropoffStopName] ?? dropoffStopName;
-      final booking = await ref.read(bookingRepositoryProvider).createBooking(
-        tripId: widget.trip.id,
-        pickupStopId: pickupStopId,
-        dropoffStopId: dropoffStopId,
-        seats: _seats,
-      );
+      final stopIds = widget.trip.displayedRouteStopIds;
+      final pickupStopId = stopIds[pickupIndex];
+      final dropoffStopId = stopIds[dropoffIndex];
+      final booking = await ref
+          .read(bookingRepositoryProvider)
+          .createBooking(
+            tripId: widget.trip.id,
+            pickupStopId: pickupStopId,
+            dropoffStopId: dropoffStopId,
+            seats: _seats,
+          );
       if (!mounted) return;
       ref.invalidate(myBookingsProvider);
-      context.push('/booking-confirmation', extra: booking);
+      context.push('/passenger/booking-confirmation', extra: booking);
     } catch (error) {
       if (!mounted) return;
       final message = error.toString();
       final friendlyMessage = message.contains('segment')
           ? 'لا توجد مقاعد كافية في هذا الجزء من المسار.'
           : message.contains('Authentication')
-              ? 'يجب تسجيل الدخول قبل حجز الرحلة.'
-              : message.contains('network') || message.contains('SocketException')
-                  ? 'تعذر الوصول إلى الخادم. حاول مرة أخرى.'
-                  : 'تعذر إتمام الحجز في الوقت الحالي.';
+          ? 'يجب تسجيل الدخول قبل حجز الرحلة.'
+          : message.contains('network') || message.contains('SocketException')
+          ? 'تعذر الوصول إلى الخادم. حاول مرة أخرى.'
+          : 'تعذر إتمام الحجز في الوقت الحالي.';
       setState(() => _errorText = friendlyMessage);
     } finally {
       if (mounted) {
@@ -93,68 +107,130 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('حجز الرحلة'),
+        title: const Text('Your journey'),
         backgroundColor: AppColors.background,
       ),
       body: SafeArea(
-        child: Padding(
+        child: ListView(
           padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(widget.trip.routeSummary, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      Text('${widget.trip.time} · ${widget.trip.driverName}', style: const TextStyle(color: AppColors.textMuted)),
-                    ],
-                  ),
+          children: [
+            Text(
+              widget.trip.routeSummary,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            Text('${widget.trip.time} · ${widget.trip.driverName}'),
+            const SizedBox(height: 24),
+            const Text(
+              'Choose your pickup',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            RouteTimeline(
+              stops: _stops,
+              selectedPickupIndex: _pickupIndex,
+              onStopTap: (index) => setState(() {
+                _pickupIndex = index;
+                _dropoffIndex = null;
+                _errorText = null;
+              }),
+            ),
+            const SizedBox(height: 20),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(value: false, label: Text('Route stop')),
+                ButtonSegment(value: true, label: Text('Custom pickup')),
+              ],
+              selected: {_customPickup},
+              onSelectionChanged: (values) => setState(() {
+                _customPickup = values.first;
+                _errorText = null;
+              }),
+            ),
+            if (_customPickup)
+              const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: Text(
+                  'Custom pickup requires a route-compatible location service. It is not available yet.',
+                  style: TextStyle(color: AppColors.textMuted),
                 ),
               ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _pickup,
-                decoration: const InputDecoration(labelText: 'نقطة الانطلاق', border: OutlineInputBorder()),
-                items: _stops
-                    .map((stop) => DropdownMenuItem(value: stop, child: Text(stop)))
-                    .toList(),
-                onChanged: (value) => setState(() => _pickup = value),
+            const SizedBox(height: 20),
+            if (_pickupIndex != null && _pickupIndex! < _stops.length - 1) ...[
+              const Text(
+                'Choose your drop-off',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _dropoff,
-                decoration: const InputDecoration(labelText: 'نقطة الوصول', border: OutlineInputBorder()),
-                items: _stops
-                    .map((stop) => DropdownMenuItem(value: stop, child: Text(stop)))
-                    .toList(),
-                onChanged: (value) => setState(() => _dropoff = value),
+              const SizedBox(height: 8),
+              RouteTimeline(
+                stops: _stops,
+                selectedPickupIndex: _pickupIndex,
+                selectedDropoffIndex: _dropoffIndex,
+                disabledThroughIndex: _pickupIndex,
+                onStopTap: (index) => setState(() {
+                  _dropoffIndex = index;
+                  _errorText = null;
+                }),
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<int>(
-                value: _seats,
-                decoration: const InputDecoration(labelText: 'عدد المقاعد', border: OutlineInputBorder()),
-                items: [1, 2, 3, 4]
-                    .map((seat) => DropdownMenuItem(value: seat, child: Text(seat.toString())))
-                    .toList(),
-                onChanged: (value) => setState(() => _seats = value ?? 1),
-              ),
-              if (_errorText != null) ...[
-                const SizedBox(height: 12),
-                Text(_errorText!, style: const TextStyle(color: Colors.redAccent)),
-              ],
               const SizedBox(height: 20),
-              FilledButton(
-                onPressed: _loading ? null : _submitBooking,
-                child: _loading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('تأكيد الحجز'),
+            ],
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Available on this segment',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    Text('$_availableSeats seats'),
+                    const Divider(height: 24),
+                    Row(
+                      children: [
+                        const Expanded(child: Text('Seats')),
+                        IconButton(
+                          onPressed: _seats > 1
+                              ? () => setState(() => _seats--)
+                              : null,
+                          icon: const Icon(Icons.remove_rounded),
+                        ),
+                        Text('$_seats'),
+                        IconButton(
+                          onPressed: _seats < _availableSeats
+                              ? () => setState(() => _seats++)
+                              : null,
+                          icon: const Icon(Icons.add_rounded),
+                        ),
+                      ],
+                    ),
+                    Text('Price: ${widget.trip.price} EGP'),
+                  ],
+                ),
+              ),
+            ),
+            if (_errorText != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _errorText!,
+                style: const TextStyle(color: Colors.redAccent),
               ),
             ],
-          ),
+            const SizedBox(height: 18),
+            FilledButton(
+              onPressed: _loading || _availableSeats <= 0 || _customPickup
+                  ? null
+                  : _submitBooking,
+              child: _loading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Continue'),
+            ),
+          ],
         ),
       ),
     );

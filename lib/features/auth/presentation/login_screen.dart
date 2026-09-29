@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_logo.dart';
 import '../data/supabase_auth_repository.dart';
 import 'providers/auth_providers.dart';
+import '../../profiles/presentation/providers/profile_providers.dart';
 import 'widgets/auth_submit_button.dart';
 import 'widgets/auth_text_field.dart';
 
@@ -37,11 +38,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
-      await ref.read(authRepositoryProvider).signInWithEmail(
+      await ref
+          .read(authRepositoryProvider)
+          .signInWithEmail(
             email: _emailController.text.trim(),
             password: _passwordController.text,
           );
-      if (mounted) context.go('/trips');
+      ref.invalidate(currentProfileProvider);
+      if (mounted) context.go('/');
     } on AuthException catch (e) {
       setState(() => _errorText = e.message);
     } finally {

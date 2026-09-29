@@ -56,6 +56,24 @@ void main() {
       expect(trip.routeSummary, 'Cairo → Benha → Mit Ghamr → Minyet El-Nasr');
     });
 
+    test(
+      'uses the minimum available seats across the selected direction segment',
+      () {
+        final row = _tripRow()
+          ..['segment_availability'] = [
+            {'segment_start_sequence': 1, 'available_seats': 6},
+            {'segment_start_sequence': 2, 'available_seats': 3},
+            {'segment_start_sequence': 3, 'available_seats': 5},
+          ];
+        final outbound = Trip.fromSupabase(row);
+        final reverse = Trip.fromSupabase({...row, 'direction': 'reverse'});
+
+        expect(outbound.availableSeatsForDisplayRange(1, 3), 3);
+        expect(reverse.availableSeatsForDisplayRange(0, 2), 3);
+        expect(reverse.availableSeatsForDisplayRange(3, 1), 0);
+      },
+    );
+
     test('rejects missing route or route stops', () {
       expect(
         () => Trip.fromSupabase({..._tripRow(), 'route': null}),

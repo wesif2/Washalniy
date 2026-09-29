@@ -1,71 +1,114 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../auth/presentation/providers/auth_providers.dart';
 import '../domain/user_role.dart';
-import 'widgets/login_prompt.dart';
+import '../../profiles/presentation/providers/profile_providers.dart';
 import 'widgets/role_card.dart';
-import 'widgets/role_select_header.dart';
 
-class RoleSelectScreen extends StatelessWidget {
+class RoleSelectScreen extends ConsumerStatefulWidget {
   const RoleSelectScreen({super.key});
 
-  void _onRoleSelected(BuildContext context, UserRole role) {
-    switch (role) {
-      case UserRole.passenger:
-        context.push('/trips');
-      case UserRole.driver:
-        context.push('/driver-dashboard');
+  @override
+  ConsumerState<RoleSelectScreen> createState() => _RoleSelectScreenState();
+}
+
+class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
+  bool _saving = false;
+  String? _error;
+
+  Future<void> _saveRole(UserRole role) async {
+    final user = ref.read(authRepositoryProvider).currentUser;
+    if (user == null) {
+      context.go('/login');
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await ref
+          .read(profileRepositoryProvider)
+          .saveRole(userId: user.id, role: role.name);
+      ref.invalidate(currentProfileProvider);
+      if (mounted) {
+        context.go(
+          role == UserRole.driver ? '/driver/home' : '/passenger/home',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = 'Could not save your choice. Please try again.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          const RoleSelectHeader(),
-          Expanded(
-            child: SafeArea(
-              top: false,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const Icon(
+                      Icons.route_rounded,
+                      size: 52,
+                      color: AppColors.primaryDark,
+                    ),
+                    const SizedBox(height: 24),
                     const Text(
-                      'هتكمل إزاي؟',
+                      'How do you want to use Wasselni?',
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 26,
                         fontWeight: FontWeight.bold,
                         color: AppColors.dark,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     RoleCard(
                       highlighted: true,
-                      icon: Icons.drive_eta_rounded,
-                      title: 'أنا سائق',
-                      subtitle: 'انزل رحلتك واستقبل حجوزات',
-                      onTap: () => _onRoleSelected(context, UserRole.driver),
+                      icon: Icons.person_rounded,
+                      title: 'PASSENGER',
+                      subtitle: 'Find and book trips',
+                      onTap: _saving
+                          ? null
+                          : () => _saveRole(UserRole.passenger),
                     ),
                     const SizedBox(height: 16),
                     RoleCard(
-                      icon: Icons.airline_seat_recline_normal_rounded,
-                      title: 'أنا راكب',
-                      subtitle: 'دوّر على رحلة واحجز مقعدك',
-                      onTap: () => _onRoleSelected(context, UserRole.passenger),
+                      icon: Icons.directions_car_rounded,
+                      title: 'DRIVER',
+                      subtitle: 'Offer trips and earn',
+                      onTap: _saving ? null : () => _saveRole(UserRole.driver),
                     ),
-                    const Spacer(),
-                    Center(
-                      child: LoginPrompt(onTap: () => context.push('/login')),
-                    ),
+                    if (_saving) ...[
+                      const SizedBox(height: 20),
+                      const Center(child: CircularProgressIndicator()),
+                    ],
+                    if (_error != null) ...[
+                      const SizedBox(height: 16),
+                      Text(_error!, style: const TextStyle(color: Colors.red)),
+                    ],
                   ],
                 ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }

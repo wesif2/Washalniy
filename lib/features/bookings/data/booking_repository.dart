@@ -14,13 +14,27 @@ class BookingRepository {
     }
 
     final rows = await _client
-        .from('bookings')
+        .from('booking_browse')
         .select()
-        .eq('passenger_id', userId)
         .order('created_at', ascending: false);
 
     return (rows as List)
-        .map((row) => Booking.fromSupabase(Map<String, dynamic>.from(row as Map)))
+        .map(
+          (row) => Booking.fromSupabase(Map<String, dynamic>.from(row as Map)),
+        )
+        .toList();
+  }
+
+  Future<List<Booking>> fetchBookingsForTrip(String tripId) async {
+    final rows = await _client
+        .from('booking_browse')
+        .select()
+        .eq('trip_id', tripId)
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .map(
+          (row) => Booking.fromSupabase(Map<String, dynamic>.from(row as Map)),
+        )
         .toList();
   }
 
@@ -60,7 +74,7 @@ class BookingRepository {
 
     final bookingId = result.toString();
     final booking = await _client
-        .from('bookings')
+        .from('booking_browse')
         .select()
         .eq('id', bookingId)
         .single();

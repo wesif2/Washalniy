@@ -11,7 +11,11 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 
 /// Emits the current user whenever the auth state changes, starting
 /// with whoever is already signed in.
-final authStateProvider = StreamProvider<AppUser?>((ref) {
+final currentUserProvider = StreamProvider<AppUser?>((ref) {
   final repository = ref.watch(authRepositoryProvider);
   return repository.authStateChanges();
 });
+
+/// Compatibility name for existing consumers. Both names refer to the same
+/// auth-backed provider, so identity has one source of truth.
+final authStateProvider = currentUserProvider;

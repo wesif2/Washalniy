@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../profiles/presentation/providers/profile_providers.dart';
+import '../../trips/presentation/providers/trip_providers.dart';
 import '../../routes/presentation/providers/route_providers.dart';
 import '../../vehicles/presentation/providers/vehicle_providers.dart';
 import 'providers/driver_providers.dart';
@@ -15,10 +17,17 @@ class DriverDashboardScreen extends ConsumerWidget {
     final driverState = ref.watch(currentDriverProvider);
     final vehiclesState = ref.watch(myVehiclesProvider);
     final routesState = ref.watch(activeRoutesProvider);
+    final profileState = ref.watch(currentProfileProvider);
+    final tripsState = ref.watch(myTripsProvider);
+    final driverName = profileState.asData?.value?.fullName;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('لوحة السائق'),
+        title: Text(
+          driverName == null || driverName.trim().isEmpty
+              ? 'Driver Home'
+              : 'Good morning, ${driverName.split(' ').first}',
+        ),
         backgroundColor: AppColors.background,
         elevation: 0,
       ),
@@ -74,6 +83,38 @@ class DriverDashboardScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 16),
+              tripsState.when(
+                loading: () => const LinearProgressIndicator(),
+                error: (error, stack) => const Text('Unable to load upcoming trips.'),
+                data: (trips) {
+                  final upcoming = trips
+                      .where((trip) =>
+                          trip.status == 'published' &&
+                          (trip.departureDateTime?.isAfter(DateTime.now()) ?? false))
+                      .toList()
+                    ..sort((left, right) => left.departureDateTime!
+                        .compareTo(right.departureDateTime!));
+                  if (upcoming.isEmpty) {
+                    return const Card(
+                      child: ListTile(
+                        leading: Icon(Icons.route_outlined),
+                        title: Text('No upcoming trips'),
+                      ),
+                    );
+                  }
+                  final trip = upcoming.first;
+                  return Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.route_rounded),
+                      title: Text(trip.routeSummary),
+                      subtitle: Text('${trip.time} · ${trip.price} EGP'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push('/driver/trip/${trip.id}', extra: trip),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
               _ActionTile(
                 icon: Icons.directions_car_rounded,
                 title: 'سياراتي',
@@ -85,14 +126,14 @@ class DriverDashboardScreen extends ConsumerWidget {
                 icon: Icons.route_rounded,
                 title: 'إنشاء رحلة',
                 subtitle: 'استعرض الطرق واختر الاتجاه والوقت',
-                onTap: () => context.push('/trips/create'),
+                onTap: () => context.push('/driver/create-trip'),
               ),
               const SizedBox(height: 12),
               _ActionTile(
                 icon: Icons.people_alt_rounded,
                 title: 'رحلاتي',
                 subtitle: 'عرض الحجوزات والركاب',
-                onTap: () => context.push('/driver-trips'),
+                onTap: () => context.push('/driver/trips'),
               ),
               const SizedBox(height: 20),
               _SummarySection(

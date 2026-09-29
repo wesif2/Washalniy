@@ -4,7 +4,12 @@ The initial schema migration is reported as applied, but it could not be verifie
 
 ## Pending live verification
 
-1. Run [supabase/migrations/202609290002_public_trip_browse_view.sql](../supabase/migrations/202609290002_public_trip_browse_view.sql) in the configured project's SQL Editor.
+1. Apply all migrations after the initial schema in filename order:
+	- [202609290002_public_trip_browse_view.sql](../supabase/migrations/202609290002_public_trip_browse_view.sql)
+	- [202609290003_profile_role_selection.sql](../supabase/migrations/202609290003_profile_role_selection.sql)
+	- [202609290004_trip_segment_availability.sql](../supabase/migrations/202609290004_trip_segment_availability.sql)
+	- [202609290005_directional_segment_booking.sql](../supabase/migrations/202609290005_directional_segment_booking.sql)
+	- [202609290006_booking_browse_view.sql](../supabase/migrations/202609290006_booking_browse_view.sql)
 2. In that SQL Editor, run the following read-only check to establish whether the development auth user and deterministic seed rows exist, including rows hidden by RLS from the app client:
 
 	 ```sql

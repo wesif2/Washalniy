@@ -13,10 +13,13 @@ class VehicleRepository {
       return const <Vehicle>[];
     }
 
+    final driverId = await _driverIdForCurrentUser(required: false);
+    if (driverId == null) return const <Vehicle>[];
+
     final rows = await _client
         .from('vehicles')
         .select()
-        .eq('driver_id', await _driverIdForCurrentUser())
+        .eq('driver_id', driverId)
         .order('created_at');
 
     return (rows as List)
@@ -50,7 +53,7 @@ class VehicleRepository {
     return Vehicle.fromSupabase(response);
   }
 
-  Future<String> _driverIdForCurrentUser() async {
+  Future<String?> _driverIdForCurrentUser({bool required = true}) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) {
       throw StateError('Authentication required');
@@ -63,6 +66,7 @@ class VehicleRepository {
         .maybeSingle();
 
     if (row == null || row['id'] == null) {
+      if (!required) return null;
       throw StateError('Driver profile not found');
     }
 

@@ -5,6 +5,10 @@
 3. Run the migrations in filename order if they have not already been applied:
    - `supabase/migrations/202609290001_initial_wasselni_schema.sql`
    - `supabase/migrations/202609290002_public_trip_browse_view.sql`
+   - `supabase/migrations/202609290003_profile_role_selection.sql`
+   - `supabase/migrations/202609290004_trip_segment_availability.sql`
+   - `supabase/migrations/202609290005_directional_segment_booking.sql`
+   - `supabase/migrations/202609290006_booking_browse_view.sql`
 4. Ensure an auth user already exists with email `dev.driver@local.test`. Create it through the app's normal signup flow if necessary; do not insert directly into `auth.users`.
 5. Open `supabase/seed.sql` and copy its contents into the SQL Editor. To use another existing driver account, update `v_dev_email` near the start of the script.
 6. Press Run. The script now raises an error if the required auth user is missing instead of silently succeeding without inserting data.

@@ -33,6 +33,7 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<AppUser> signUpWithEmail({
+    required String fullName,
     required String email,
     required String password,
   }) async {
@@ -40,6 +41,7 @@ class SupabaseAuthRepository implements AuthRepository {
       final response = await _client.auth.signUp(
         email: email,
         password: password,
+        data: {'full_name': fullName.trim()},
       );
       final user = _toAppUser(response.user);
       if (user == null) {

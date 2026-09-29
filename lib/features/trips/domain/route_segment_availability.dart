@@ -92,6 +92,36 @@ class TripBooking {
 class TripSeatAvailabilityService {
   const TripSeatAvailabilityService._();
 
+  static int availableSeatsForRange({
+    required int tripCapacity,
+    required int stopCount,
+    required Map<int, int> availableSeatsBySegmentSequence,
+    required int pickupStopIndex,
+    required int dropoffStopIndex,
+    required bool reverseDirection,
+  }) {
+    if (pickupStopIndex < 0 ||
+        dropoffStopIndex <= pickupStopIndex ||
+        dropoffStopIndex >= stopCount) {
+      return 0;
+    }
+
+    var availableSeats = tripCapacity;
+    for (
+      var displayIndex = pickupStopIndex;
+      displayIndex < dropoffStopIndex;
+      displayIndex++
+    ) {
+      final segmentSequence = reverseDirection
+          ? stopCount - displayIndex - 1
+          : displayIndex + 1;
+      final segmentSeats =
+          availableSeatsBySegmentSequence[segmentSequence] ?? 0;
+      if (segmentSeats < availableSeats) availableSeats = segmentSeats;
+    }
+    return availableSeats;
+  }
+
   static Map<int, int> occupancyBySegment({
     required RouteDefinition route,
     required List<TripBooking> bookings,
@@ -113,7 +143,8 @@ class TripSeatAvailabilityService {
       );
 
       for (final segmentIndex in affectedSegments) {
-        occupancy[segmentIndex] = (occupancy[segmentIndex] ?? 0) + booking.seats;
+        occupancy[segmentIndex] =
+            (occupancy[segmentIndex] ?? 0) + booking.seats;
       }
     }
 
@@ -131,7 +162,8 @@ class TripSeatAvailabilityService {
     if (pickupStopIndex < 0 || dropoffStopIndex <= pickupStopIndex) {
       return false;
     }
-    if (pickupStopIndex >= route.stops.length || dropoffStopIndex > route.stops.length) {
+    if (pickupStopIndex >= route.stops.length ||
+        dropoffStopIndex > route.stops.length) {
       return false;
     }
     if (requestedSeats <= 0 || requestedSeats > tripCapacity) {

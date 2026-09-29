@@ -11,3 +11,7 @@ final tripRepositoryProvider = Provider<TripRepository>((ref) {
 final publishedTripsProvider = FutureProvider<List<Trip>>((ref) {
   return ref.watch(tripRepositoryProvider).fetchPublishedTrips();
 });
+
+final myTripsProvider = FutureProvider<List<Trip>>((ref) {
+  return ref.watch(tripRepositoryProvider).fetchMyTrips();
+});

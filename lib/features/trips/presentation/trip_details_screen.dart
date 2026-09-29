@@ -3,16 +3,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/route_timeline.dart';
 import '../domain/trip.dart';
 
 class TripDetailsScreen extends ConsumerWidget {
-  const TripDetailsScreen({super.key, required this.trip});
+  const TripDetailsScreen({
+    super.key,
+    required this.trip,
+    this.pickupStop,
+    this.dropoffStop,
+  });
 
   final Trip trip;
+  final String? pickupStop;
+  final String? dropoffStop;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stops = trip.displayedRouteStops;
+    final pickupIndex = pickupStop == null ? 0 : stops.indexOf(pickupStop!);
+    final dropoffIndex = dropoffStop == null
+        ? stops.length - 1
+        : stops.indexOf(dropoffStop!);
+    final availableSeats = trip.availableSeatsForDisplayRange(
+      pickupIndex,
+      dropoffIndex,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -31,7 +47,7 @@ class TripDetailsScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${trip.driverName} · ${trip.carModel}',
+                        trip.driverName,
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -39,21 +55,28 @@ class TripDetailsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'حالة السائق: ${trip.driverVerificationStatus}',
+                        trip.driverVerificationStatus == 'verified'
+                            ? 'Verified Driver'
+                            : 'Driver verification: ${trip.driverVerificationStatus}',
                         style: TextStyle(color: AppColors.textMuted),
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'المركبة: ${trip.carModel}',
+                        'Vehicle: ${trip.carModel}',
                         style: const TextStyle(fontSize: 16),
                       ),
                       if (trip.vehicleColor?.isNotEmpty ?? false)
-                        Text('اللون: ${trip.vehicleColor}'),
-                      Text('السعة: ${trip.seatCapacity} مقاعد'),
-                      Text('السعر: ${trip.price} ج'),
+                        Text('Color: ${trip.vehicleColor}'),
+                      if (trip.vehicleSeatCapacity > 0)
+                        Text(
+                          'Vehicle capacity: ${trip.vehicleSeatCapacity} seats',
+                        ),
+                      Text('Seats offered: ${trip.seatCapacity}'),
+                      Text('Available on this segment: $availableSeats seats'),
+                      Text('Price: ${trip.price} EGP'),
                       const SizedBox(height: 8),
                       Text(
-                        'المغادرة: ${trip.time}',
+                        'Departure: ${_departureLabel(trip)}',
                         style: const TextStyle(color: AppColors.textMuted),
                       ),
                     ],
@@ -62,7 +85,7 @@ class TripDetailsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               const Text(
-                'المسار',
+                'ROUTE',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
@@ -74,36 +97,12 @@ class TripDetailsScreen extends ConsumerWidget {
                     style: const TextStyle(color: AppColors.textMuted),
                   ),
                 ),
-              ...List.generate(stops.length, (index) {
-                final stop = stops[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.tint,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        index == stops.length - 1
-                            ? Icons.location_on
-                            : Icons.trip_origin,
-                        color: AppColors.primaryDark,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(stop)),
-                    ],
-                  ),
-                );
-              }),
+              RouteTimeline(stops: stops),
               const SizedBox(height: 18),
               FilledButton(
-                onPressed: () => context.push('/booking', extra: trip),
-                child: const Text('احجز الآن'),
+                onPressed: () =>
+                    context.push('/passenger/booking', extra: trip),
+                child: const Text('Choose pickup and drop-off'),
               ),
             ],
           ),
@@ -111,4 +110,12 @@ class TripDetailsScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _departureLabel(Trip trip) {
+  final departure = trip.departureDateTime?.toLocal();
+  if (departure == null) return trip.time;
+  final date =
+      '${departure.day.toString().padLeft(2, '0')}/${departure.month.toString().padLeft(2, '0')}/${departure.year}';
+  return '$date · ${trip.time}';
 }

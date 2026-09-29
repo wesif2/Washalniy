@@ -11,3 +11,7 @@ final bookingRepositoryProvider = Provider<BookingRepository>((ref) {
 final myBookingsProvider = FutureProvider<List<Booking>>((ref) {
   return ref.watch(bookingRepositoryProvider).fetchMyBookings();
 });
+
+final tripBookingsProvider = FutureProvider.family<List<Booking>, String>((ref, tripId) {
+  return ref.watch(bookingRepositoryProvider).fetchBookingsForTrip(tripId);
+});

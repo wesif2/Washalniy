@@ -4,12 +4,34 @@ import '../../../../core/theme/app_colors.dart';
 import '../../domain/trip.dart';
 
 class TripCard extends StatelessWidget {
-  const TripCard({super.key, required this.trip, required this.onBook});
+  const TripCard({
+    super.key,
+    required this.trip,
+    required this.onBook,
+    this.routeLabel,
+    this.pickupStop,
+    this.dropoffStop,
+  });
 
   final Trip trip;
   final VoidCallback onBook;
+  final String? routeLabel;
+  final String? pickupStop;
+  final String? dropoffStop;
 
-  String get _seatsText => '${trip.seatCapacity} مقاعد';
+  String get _seatsText {
+    if (pickupStop == null || dropoffStop == null) {
+      return '${trip.seatCapacity} seats offered';
+    }
+    final stops = trip.displayedRouteStops;
+    final pickupIndex = stops.indexOf(pickupStop!);
+    final dropoffIndex = stops.indexOf(dropoffStop!);
+    final available = trip.availableSeatsForDisplayRange(
+      pickupIndex,
+      dropoffIndex,
+    );
+    return '$available seats on this segment';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +49,7 @@ class TripCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  trip.routeSummary,
+                  routeLabel ?? trip.routeSummary,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -62,7 +84,7 @@ class TripCard extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              child: const Text('احجز مقعد'),
+              child: const Text('View Trip'),
             ),
           ),
         ],

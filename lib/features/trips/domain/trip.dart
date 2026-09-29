@@ -1,4 +1,5 @@
 import '../../routes/domain/route_model.dart';
+import 'route_segment_availability.dart';
 
 class Trip {
   const Trip({
@@ -27,6 +28,7 @@ class Trip {
     this.vehicleColor,
     this.vehicleSeatCapacity = 0,
     this.notes = '',
+    this.segmentAvailableSeats = const {},
   });
 
   final String id;
@@ -54,6 +56,7 @@ class Trip {
   final String? vehicleColor;
   final int vehicleSeatCapacity;
   final String notes;
+  final Map<int, int> segmentAvailableSeats;
 
   List<String> get displayedRouteStops =>
       direction == 'reverse' ? routeStops.reversed.toList() : routeStops;
@@ -66,6 +69,17 @@ class Trip {
       return displayedRouteStops.join(' → ');
     }
     return '$from → $to';
+  }
+
+  int availableSeatsForDisplayRange(int pickupIndex, int dropoffIndex) {
+    return TripSeatAvailabilityService.availableSeatsForRange(
+      tripCapacity: seatCapacity,
+      stopCount: routeStops.length,
+      availableSeatsBySegmentSequence: segmentAvailableSeats,
+      pickupStopIndex: pickupIndex,
+      dropoffStopIndex: dropoffIndex,
+      reverseDirection: direction == 'reverse',
+    );
   }
 
   factory Trip.fromSupabase(Map<String, dynamic> json) {
@@ -149,6 +163,19 @@ class Trip {
 
     final names = validStops.map((stop) => stop.name).toList();
     final stopIds = validStops.map((stop) => stop.id).toList();
+    final segmentAvailability = <int, int>{};
+    final availabilityData = json['segment_availability'];
+    if (availabilityData is List) {
+      for (final item in availabilityData) {
+        if (item is! Map) continue;
+        final segment = Map<String, dynamic>.from(item);
+        final sequence = (segment['segment_start_sequence'] as num?)?.toInt();
+        final available = (segment['available_seats'] as num?)?.toInt();
+        if (sequence != null && sequence > 0 && available != null) {
+          segmentAvailability[sequence] = available;
+        }
+      }
+    }
     final isReverse = direction == 'reverse';
 
     return Trip(
@@ -178,6 +205,7 @@ class Trip {
       status: (json['status'] ?? 'published').toString(),
       direction: direction,
       notes: json['notes']?.toString() ?? '',
+      segmentAvailableSeats: segmentAvailability,
     );
   }
 

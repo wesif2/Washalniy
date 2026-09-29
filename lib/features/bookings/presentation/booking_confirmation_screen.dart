@@ -23,7 +23,11 @@ class BookingConfirmationScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.check_circle_rounded, size: 72, color: AppColors.primary),
+              const Icon(
+                Icons.check_circle_rounded,
+                size: 72,
+                color: AppColors.primary,
+              ),
               const SizedBox(height: 16),
               const Text(
                 '✓ Booking Confirmed',
@@ -34,14 +38,35 @@ class BookingConfirmationScreen extends StatelessWidget {
               Text(
                 'Booking Code: ${booking.bookingCode}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 16),
-              Text('الحالة: ${booking.status}', textAlign: TextAlign.center),
+              Text(
+                'Route: ${booking.routeSummary}',
+                textAlign: TextAlign.center,
+              ),
+              Text(
+                'Departure: ${_confirmationDate(booking)}',
+                textAlign: TextAlign.center,
+              ),
+              Text('Seats: ${booking.seats}', textAlign: TextAlign.center),
+              Text('Price: ${booking.price} EGP', textAlign: TextAlign.center),
+              Text('Status: ${booking.status}', textAlign: TextAlign.center),
               const SizedBox(height: 24),
               FilledButton(
-                onPressed: () => context.push('/bookings'),
-                child: const Text('عرض حجوزاتي'),
+                onPressed: () => context.go(
+                  '/passenger/booking/${booking.id}',
+                  extra: booking,
+                ),
+                child: const Text('View Booking'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton(
+                onPressed: () => context.go('/passenger/home'),
+                child: const Text('Back to Home'),
               ),
             ],
           ),
@@ -49,4 +74,12 @@ class BookingConfirmationScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+String _confirmationDate(Booking booking) {
+  final departure = booking.departureTime?.toLocal();
+  if (departure == null) return 'Unavailable';
+  final hour = departure.hour.toString().padLeft(2, '0');
+  final minute = departure.minute.toString().padLeft(2, '0');
+  return '${departure.day}/${departure.month}/${departure.year} $hour:$minute';
 }

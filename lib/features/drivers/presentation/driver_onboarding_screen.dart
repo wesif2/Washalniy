@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../data/driver_repository.dart';
 import 'providers/driver_providers.dart';
 
 class DriverOnboardingScreen extends ConsumerStatefulWidget {

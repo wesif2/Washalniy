@@ -11,6 +11,7 @@ abstract interface class AuthRepository {
   Stream<AppUser?> authStateChanges();
 
   Future<AppUser> signUpWithEmail({
+    required String fullName,
     required String email,
     required String password,
   });
